@@ -17,4 +17,6 @@ const (
 	LLMOSPublicNamespace = "llmos-public"
 	SUCNamespace         = "system-upgrade"
 	TimeLayout           = time.RFC3339
+
+	AdminRole = "cluster-admin"
 )
