@@ -27,9 +27,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/chat"
-	"github.com/llmos-ai/llmos-controller/pkg/types/v1"
+	v1 "github.com/llmos-ai/llmos-controller/pkg/types/v1"
 )
 
 // ChatCreate is the builder for creating a Chat entity.
@@ -152,30 +151,30 @@ func (cc *ChatCreate) defaults() {
 // check runs all checks and user-defined validators on the builder.
 func (cc *ChatCreate) check() error {
 	if _, ok := cc.mutation.Title(); !ok {
-		return &ValidationError{Name: "title", err: errors.New(`database: missing required field "Chat.title"`)}
+		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Chat.title"`)}
 	}
 	if v, ok := cc.mutation.Title(); ok {
 		if err := chat.TitleValidator(v); err != nil {
-			return &ValidationError{Name: "title", err: fmt.Errorf(`database: validator failed for field "Chat.title": %w`, err)}
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Chat.title": %w`, err)}
 		}
 	}
 	if _, ok := cc.mutation.UserId(); !ok {
-		return &ValidationError{Name: "userId", err: errors.New(`database: missing required field "Chat.userId"`)}
+		return &ValidationError{Name: "userId", err: errors.New(`ent: missing required field "Chat.userId"`)}
 	}
 	if _, ok := cc.mutation.Models(); !ok {
-		return &ValidationError{Name: "models", err: errors.New(`database: missing required field "Chat.models"`)}
+		return &ValidationError{Name: "models", err: errors.New(`ent: missing required field "Chat.models"`)}
 	}
 	if _, ok := cc.mutation.Tags(); !ok {
-		return &ValidationError{Name: "tags", err: errors.New(`database: missing required field "Chat.tags"`)}
+		return &ValidationError{Name: "tags", err: errors.New(`ent: missing required field "Chat.tags"`)}
 	}
 	if _, ok := cc.mutation.History(); !ok {
-		return &ValidationError{Name: "history", err: errors.New(`database: missing required field "Chat.history"`)}
+		return &ValidationError{Name: "history", err: errors.New(`ent: missing required field "Chat.history"`)}
 	}
 	if _, ok := cc.mutation.Messages(); !ok {
-		return &ValidationError{Name: "messages", err: errors.New(`database: missing required field "Chat.messages"`)}
+		return &ValidationError{Name: "messages", err: errors.New(`ent: missing required field "Chat.messages"`)}
 	}
 	if _, ok := cc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "createdAt", err: errors.New(`database: missing required field "Chat.createdAt"`)}
+		return &ValidationError{Name: "createdAt", err: errors.New(`ent: missing required field "Chat.createdAt"`)}
 	}
 	return nil
 }
@@ -256,7 +255,7 @@ func (cc *ChatCreate) createSpec() (*Chat, *sqlgraph.CreateSpec) {
 //		).
 //		// Override some of the fields with custom
 //		// update values.
-//		Update(func(u *database.ChatUpsert) {
+//		Update(func(u *ent.ChatUpsert) {
 //			SetTitle(v+v).
 //		}).
 //		Exec(ctx)
@@ -503,7 +502,7 @@ func (u *ChatUpsertOne) UpdateMessages() *ChatUpsertOne {
 // Exec executes the query.
 func (u *ChatUpsertOne) Exec(ctx context.Context) error {
 	if len(u.create.conflict) == 0 {
-		return errors.New("database: missing options for ChatCreate.OnConflict")
+		return errors.New("ent: missing options for ChatCreate.OnConflict")
 	}
 	return u.create.Exec(ctx)
 }
@@ -520,7 +519,7 @@ func (u *ChatUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
 	if u.create.driver.Dialect() == dialect.MySQL {
 		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
 		// fields from the database since MySQL does not support the RETURNING clause.
-		return id, errors.New("database: ChatUpsertOne.ID is not supported by MySQL driver. Use ChatUpsertOne.Exec instead")
+		return id, errors.New("ent: ChatUpsertOne.ID is not supported by MySQL driver. Use ChatUpsertOne.Exec instead")
 	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
@@ -635,7 +634,7 @@ func (ccb *ChatCreateBulk) ExecX(ctx context.Context) {
 //		).
 //		// Override some of the fields with custom
 //		// update values.
-//		Update(func(u *database.ChatUpsert) {
+//		Update(func(u *ent.ChatUpsert) {
 //			SetTitle(v+v).
 //		}).
 //		Exec(ctx)
@@ -809,11 +808,11 @@ func (u *ChatUpsertBulk) Exec(ctx context.Context) error {
 	}
 	for i, b := range u.create.builders {
 		if len(b.conflict) != 0 {
-			return fmt.Errorf("database: OnConflict was set for builder %d. Set it on the ChatCreateBulk instead", i)
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the ChatCreateBulk instead", i)
 		}
 	}
 	if len(u.create.conflict) == 0 {
-		return errors.New("database: missing options for ChatCreateBulk.OnConflict")
+		return errors.New("ent: missing options for ChatCreateBulk.OnConflict")
 	}
 	return u.create.Exec(ctx)
 }

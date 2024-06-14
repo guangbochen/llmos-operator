@@ -26,10 +26,9 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/chat"
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/predicate"
-	"github.com/llmos-ai/llmos-controller/pkg/types/v1"
+	v1 "github.com/llmos-ai/llmos-controller/pkg/types/v1"
 )
 
 const (
@@ -129,7 +128,7 @@ func (m ChatMutation) Client() *Client {
 // it returns an error otherwise.
 func (m ChatMutation) Tx() (*Tx, error) {
 	if _, ok := m.driver.(*txDriver); !ok {
-		return nil, errors.New("database: mutation is not running in a transaction")
+		return nil, errors.New("ent: mutation is not running in a transaction")
 	}
 	tx := &Tx{config: m.config}
 	tx.init()

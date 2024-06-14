@@ -25,7 +25,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/chat"
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/predicate"
 )
@@ -238,7 +237,7 @@ func (cq *ChatQuery) Exist(ctx context.Context) (bool, error) {
 	case IsNotFound(err):
 		return false, nil
 	case err != nil:
-		return false, fmt.Errorf("database: check existence: %w", err)
+		return false, fmt.Errorf("ent: check existence: %w", err)
 	default:
 		return true, nil
 	}
@@ -283,7 +282,7 @@ func (cq *ChatQuery) Clone() *ChatQuery {
 //
 //	client.Chat.Query().
 //		GroupBy(chat.FieldTitle).
-//		Aggregate(database.Count()).
+//		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (cq *ChatQuery) GroupBy(field string, fields ...string) *ChatGroupBy {
 	cq.ctx.Fields = append([]string{field}, fields...)
@@ -322,7 +321,7 @@ func (cq *ChatQuery) Aggregate(fns ...AggregateFunc) *ChatSelect {
 func (cq *ChatQuery) prepareQuery(ctx context.Context) error {
 	for _, inter := range cq.inters {
 		if inter == nil {
-			return fmt.Errorf("database: uninitialized interceptor (forgotten import database/runtime?)")
+			return fmt.Errorf("ent: uninitialized interceptor (forgotten import ent/runtime?)")
 		}
 		if trv, ok := inter.(Traverser); ok {
 			if err := trv.Traverse(ctx, cq); err != nil {
@@ -332,7 +331,7 @@ func (cq *ChatQuery) prepareQuery(ctx context.Context) error {
 	}
 	for _, f := range cq.ctx.Fields {
 		if !chat.ValidColumn(f) {
-			return &ValidationError{Name: f, err: fmt.Errorf("database: invalid field %q for query", f)}
+			return &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 		}
 	}
 	if cq.path != nil {

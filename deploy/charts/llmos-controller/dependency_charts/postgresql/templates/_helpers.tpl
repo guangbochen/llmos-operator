@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "ollama.name" -}}
+{{- define "postgresql.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "ollama.fullname" -}}
+{{- define "postgresql.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
@@ -29,16 +29,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "ollama.chart" -}}
+{{- define "postgresql.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "ollama.labels" -}}
-helm.sh/chart: {{ include "ollama.chart" . }}
-{{ include "ollama.selectorLabels" . }}
+{{- define "postgresql.labels" -}}
+helm.sh/chart: {{ include "postgresql.chart" . }}
+{{ include "postgresql.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -48,17 +48,18 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "ollama.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "ollama.name" . }}
+{{- define "postgresql.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "postgresql.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: "postgresql"
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "ollama.serviceAccountName" -}}
+{{- define "postgresql.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "ollama.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "postgresql.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -67,7 +68,7 @@ Create the name of the service account to use
 {{/*
 Create default pod affinity rules
 */}}
-{{- define "ollama.affinity" -}}
+{{- define "postgresql.affinity" -}}
 podAffinity:
   requiredDuringSchedulingIgnoredDuringExecution:
     - labelSelector:
@@ -75,6 +76,6 @@ podAffinity:
           - key: "app.kubernetes.io/name"
             operator: In
             values:
-              - {{ include "ollama.name" . }}
+              - {{ include "postgresql.name" . }}
       topologyKey: "kubernetes.io/hostname"
 {{- end }}

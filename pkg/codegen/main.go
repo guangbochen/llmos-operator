@@ -28,8 +28,8 @@ func main() {
 
 	config := &gen.Config{
 		Header:  string(header),
-		Target:  "./pkg/generated/database",
-		Package: "github.com/llmos-ai/llmos-controller/pkg/generated/database",
+		Target:  "./pkg/generated/ent",
+		Package: "github.com/llmos-ai/llmos-controller/pkg/generated/ent",
 		Features: []gen.Feature{
 			gen.FeatureUpsert,
 		},

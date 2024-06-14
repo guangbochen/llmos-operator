@@ -25,15 +25,14 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
-
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/chat"
-	"github.com/llmos-ai/llmos-controller/pkg/types/v1"
+	v1 "github.com/llmos-ai/llmos-controller/pkg/types/v1"
 )
 
 // Chat is the model entity for the Chat schema.
 type Chat struct {
 	config `json:"-"`
-	// ID of the database.
+	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
 	// Title holds the value of the "title" field.
 	Title string `json:"title,omitempty"`
@@ -161,7 +160,7 @@ func (c *Chat) Update() *ChatUpdateOne {
 func (c *Chat) Unwrap() *Chat {
 	_tx, ok := c.config.driver.(*txDriver)
 	if !ok {
-		panic("database: Chat is not a transactional entity")
+		panic("ent: Chat is not a transactional entity")
 	}
 	c.config.driver = _tx.drv
 	return c

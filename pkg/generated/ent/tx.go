@@ -51,8 +51,8 @@ type (
 	// CommitHook defines the "commit middleware". A function that gets a Committer
 	// and returns a Committer. For example:
 	//
-	//	hook := func(next database.Committer) database.Committer {
-	//		return database.CommitFunc(func(ctx context.Context, tx *database.Tx) error {
+	//	hook := func(next ent.Committer) ent.Committer {
+	//		return ent.CommitFunc(func(ctx context.Context, tx *ent.Tx) error {
 	//			// Do some stuff before.
 	//			if err := next.Commit(ctx, tx); err != nil {
 	//				return err
@@ -107,8 +107,8 @@ type (
 	// RollbackHook defines the "rollback middleware". A function that gets a Rollbacker
 	// and returns a Rollbacker. For example:
 	//
-	//	hook := func(next database.Rollbacker) database.Rollbacker {
-	//		return database.RollbackFunc(func(ctx context.Context, tx *database.Tx) error {
+	//	hook := func(next ent.Rollbacker) ent.Rollbacker {
+	//		return ent.RollbackFunc(func(ctx context.Context, tx *ent.Tx) error {
 	//			// Do some stuff before.
 	//			if err := next.Rollback(ctx, tx); err != nil {
 	//				return err

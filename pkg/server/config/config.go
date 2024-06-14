@@ -39,7 +39,8 @@ type Management struct {
 	starters []start.Starter
 }
 
-func SetupManagement(ctx context.Context, restConfig *rest.Config, namespace string, client *ent.Client) (*Management, error) {
+func SetupManagement(ctx context.Context, restConfig *rest.Config,
+	namespace string, client *ent.Client) (*Management, error) {
 	mgmt := &Management{
 		Ctx:       ctx,
 		Namespace: namespace,

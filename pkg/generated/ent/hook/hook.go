@@ -32,7 +32,7 @@ func (f ChatFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error)
 	if mv, ok := m.(*ent.ChatMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *database.ChatMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ChatMutation", m)
 }
 
 // Condition is a hook condition function.
@@ -143,14 +143,14 @@ func If(hk ent.Hook, cond Condition) ent.Hook {
 
 // On executes the given hook only for the given operation.
 //
-//	hook.On(Log, database.Delete|database.Create)
+//	hook.On(Log, ent.Delete|ent.Create)
 func On(hk ent.Hook, op ent.Op) ent.Hook {
 	return If(hk, HasOp(op))
 }
 
 // Unless skips the given hook only for the given operation.
 //
-//	hook.Unless(Log, database.Update|database.UpdateOne)
+//	hook.Unless(Log, ent.Update|ent.UpdateOne)
 func Unless(hk ent.Hook, op ent.Op) ent.Hook {
 	return If(hk, Not(HasOp(op)))
 }
@@ -166,9 +166,9 @@ func FixedError(err error) ent.Hook {
 
 // Reject returns a hook that rejects all operations that match op.
 //
-//	func (T) Hooks() []database.Hook {
-//		return []database.Hook{
-//			Reject(database.Delete|database.Update),
+//	func (T) Hooks() []ent.Hook {
+//		return []ent.Hook{
+//			Reject(ent.Delete|ent.Update),
 //		}
 //	}
 func Reject(op ent.Op) ent.Hook {

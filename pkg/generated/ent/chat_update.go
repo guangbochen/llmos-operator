@@ -26,10 +26,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/chat"
 	"github.com/llmos-ai/llmos-controller/pkg/generated/ent/predicate"
-	"github.com/llmos-ai/llmos-controller/pkg/types/v1"
+	v1 "github.com/llmos-ai/llmos-controller/pkg/types/v1"
 )
 
 // ChatUpdate is the builder for updating Chat entities.
@@ -159,7 +158,7 @@ func (cu *ChatUpdate) ExecX(ctx context.Context) {
 func (cu *ChatUpdate) check() error {
 	if v, ok := cu.mutation.Title(); ok {
 		if err := chat.TitleValidator(v); err != nil {
-			return &ValidationError{Name: "title", err: fmt.Errorf(`database: validator failed for field "Chat.title": %w`, err)}
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Chat.title": %w`, err)}
 		}
 	}
 	return nil
@@ -357,7 +356,7 @@ func (cuo *ChatUpdateOne) ExecX(ctx context.Context) {
 func (cuo *ChatUpdateOne) check() error {
 	if v, ok := cuo.mutation.Title(); ok {
 		if err := chat.TitleValidator(v); err != nil {
-			return &ValidationError{Name: "title", err: fmt.Errorf(`database: validator failed for field "Chat.title": %w`, err)}
+			return &ValidationError{Name: "title", err: fmt.Errorf(`ent: validator failed for field "Chat.title": %w`, err)}
 		}
 	}
 	return nil
@@ -370,7 +369,7 @@ func (cuo *ChatUpdateOne) sqlSave(ctx context.Context) (_node *Chat, err error) 
 	_spec := sqlgraph.NewUpdateSpec(chat.Table, chat.Columns, sqlgraph.NewFieldSpec(chat.FieldID, field.TypeUUID))
 	id, ok := cuo.mutation.ID()
 	if !ok {
-		return nil, &ValidationError{Name: "id", err: errors.New(`database: missing "Chat.id" for update`)}
+		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Chat.id" for update`)}
 	}
 	_spec.Node.ID.Value = id
 	if fields := cuo.fields; len(fields) > 0 {
@@ -378,7 +377,7 @@ func (cuo *ChatUpdateOne) sqlSave(ctx context.Context) (_node *Chat, err error) 
 		_spec.Node.Columns = append(_spec.Node.Columns, chat.FieldID)
 		for _, f := range fields {
 			if !chat.ValidColumn(f) {
-				return nil, &ValidationError{Name: f, err: fmt.Errorf("database: invalid field %q for query", f)}
+				return nil, &ValidationError{Name: f, err: fmt.Errorf("ent: invalid field %q for query", f)}
 			}
 			if f != chat.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, f)

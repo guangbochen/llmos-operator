@@ -65,21 +65,20 @@ func (h *Handler) Create(uid string, req NewChatRequest) (*entv1.Chat, error) {
 		Save(h.ctx)
 }
 
-func (h *Handler) Update(id uuid.UUID, req UpdateChatRequest) (*entv1.Chat, error) {
-	client := h.client.Chat.UpdateOneID(id).
-		SetNillableHistory(req.History).
-		SetNillableTitle(req.Title)
+func (h *Handler) Update(id string, req UpdateChatRequest) (*entv1.Chat, error) {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return nil, fmt.Errorf("failed parsing user uid: %v", err)
+	}
+	client := h.client.Chat.UpdateOneID(uid).
+		SetNillableHistory(&req.History).
+		SetNillableTitle(&req.Title)
 
 	if req.Messages != nil || len(req.Messages) > 0 {
 		client.SetMessages(req.Messages)
 	}
 
-	chat, err := client.Save(h.ctx)
-	if err != nil {
-		return nil, err
-	}
-	logrus.Debugf("updated chat: %v", chat)
-	return chat, nil
+	return client.Save(h.ctx)
 }
 
 func (h *Handler) FindByID(id, userId string) (*entv1.Chat, error) {

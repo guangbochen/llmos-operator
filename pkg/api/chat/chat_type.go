@@ -34,7 +34,8 @@ type NewChatRequest struct {
 }
 
 type UpdateChatRequest struct {
-	Title    *string          `json:"title,omitempty"`
-	History  *typev1.History  `json:"history" binding:"required"`
-	Messages []typev1.Message `json:"messages" binding:"required"`
+	Title    string           `json:"title"`
+	History  typev1.History   `json:"history"`
+	Messages []typev1.Message `json:"messages,omitempty"`
+	UserId   string           `json:"userId"`
 }

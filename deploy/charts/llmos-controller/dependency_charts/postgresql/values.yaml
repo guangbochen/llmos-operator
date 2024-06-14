@@ -1,10 +1,15 @@
 replicaCount: 1
 
 image:
-  repository: docker.io/ollama/ollama
+  repository: "docker.io/library/postgres"
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "0.1.38"
+  tag: "16.3"
+
+config:
+  db_name: "llmos"
+  user: "root"
+  password: "Password@1234"
 
 nameOverride: ""
 fullnameOverride: ""
@@ -14,7 +19,7 @@ serviceAccount:
   # Specifies whether a service account should be created
   create: true
   # Automatically mount a ServiceAccount's API credentials?
-  automount: true
+  automount: false
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -26,34 +31,31 @@ podLabels: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: {}
+securityContext:
+  runAsUser: 9999
   # capabilities:
   #   drop:
   #   - ALL
   # readOnlyRootFilesystem: true
   # runAsNonRoot: true
-  # runAsUser: 1000
 
 service:
   type: ClusterIP
-  port: 11434
+  port: 5432
 
 resources:
   requests:
-    cpu: 500m
-    memory: 1024Mi
-#    nvidia.com/gpu: 1
-#  limits:
-#    cpu: 4000m
-#    memory: 4Gi
-#    nvidia.com/gpu: 1
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 2
+    memory: 4Gi
 
 nodeSelector: {}
 
 tolerations: []
 
 persistent:
-  hostPath: "/var/lib/llmos/ollama"
-  storageSize: "10Gi"
+  storageSize: "5Gi"
   storageClassName: ""
 
