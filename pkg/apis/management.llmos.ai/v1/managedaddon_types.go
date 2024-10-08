@@ -48,8 +48,12 @@ type ManagedAddonSpec struct {
 	Version string `json:"version"`
 	// +kubebuilder:validation:Required
 	Enabled bool `json:"enabled"`
-	// +optional
+	// +optional, reinstall or waiting for operator intervention
+	FailurePolicy string `json:"failurePolicy,omitempty"`
+	// +optional, default values
 	ValuesContent string `json:"valuesContent,omitempty"`
+	// +optional, custom values that override the default values
+	CustomValuesContent string `json:"customValuesContent,omitempty"`
 }
 
 type ManagedAddonStatus struct {

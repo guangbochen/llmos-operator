@@ -15,7 +15,6 @@ spec:
   valuesContent: |-
     image:
       repository: bitnami/redis
-      tag: 7.2.5-debian-12-r4
       pullPolicy: IfNotPresent
     ## @param architecture Redis&reg; architecture. Allowed values: `standalone` or `replication`
     ##

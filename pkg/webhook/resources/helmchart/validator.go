@@ -8,6 +8,7 @@ import (
 	admissionregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/llmos-ai/llmos-operator/pkg/constant"
 	werror "github.com/llmos-ai/llmos-operator/pkg/webhook/error"
 )
 
@@ -23,10 +24,20 @@ func NewValidator() admission.Validator {
 
 func (v *validator) Delete(_ *admission.Request, obj runtime.Object) error {
 	chart := obj.(*helmv1.HelmChart)
-	if chart.Name == "llmos-crd" || chart.Name == "llmos-operator" {
+	if isSystemChart(chart) {
 		return werror.MethodNotAllowed(fmt.Sprintf("Can't delete LLMOS system chart %s", chart.Name))
 	}
 	return nil
+}
+
+func isSystemChart(chart *helmv1.HelmChart) bool {
+	if chart.Name == constant.LLMOSCrdChartName || chart.Name == constant.LLMOSOperatorChartName {
+		return true
+	}
+	if chart.Labels != nil && chart.Labels[constant.SystemAddonLabel] == "true" {
+		return true
+	}
+	return false
 }
 
 func (v *validator) Resource() admission.Resource {
