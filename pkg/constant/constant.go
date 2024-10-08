@@ -9,13 +9,16 @@ const (
 	MLPrefix    = "ml.llmos.ai"
 	MgmtPrefix  = "management.llmos.ai"
 
-	SystemNamespaceName     = "llmos-system"
-	CephSystemNamespaceName = "ceph-system"
-	PublicNamespaceName     = "llmos-public"
-	SUCNamespace            = "system-upgrade"
-	CephClusterName         = "llmos-ceph"
-	AdminRole               = "cluster-admin"
-	NvidiaGPUKey            = "nvidia.com/gpu"
+	SystemNamespaceName        = "llmos-system"
+	StorageSystemNamespaceName = "storage-system"
+	PublicNamespaceName        = "llmos-public"
+	SUCNamespace               = "system-upgrade"
+	CephClusterName            = "llmos-ceph"
+	AdminRole                  = "cluster-admin"
+	NvidiaGPUKey               = "nvidia.com/gpu"
+
+	LLMOSCrdChartName      = "llmos-crd"
+	LLMOSOperatorChartName = "llmos-operator"
 
 	TimeLayout = time.RFC3339
 

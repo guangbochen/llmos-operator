@@ -3,6 +3,8 @@ package template
 import (
 	"bytes"
 	"embed"
+	"fmt"
+	"io/fs"
 	"path/filepath"
 	"text/template"
 )
@@ -42,4 +44,19 @@ func RenderTemplate(tpl string, context interface{}) (*bytes.Buffer, error) {
 	}
 
 	return result, nil
+}
+
+func GetAllFilenames() (files []string, err error) {
+	if err := fs.WalkDir(templates, AddonTemplate, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+		fmt.Printf(d.Name())
+		files = append(files, d.Name())
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return files, nil
 }

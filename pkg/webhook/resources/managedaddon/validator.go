@@ -1,13 +1,13 @@
-package helmchart
+package managedaddon
 
 import (
 	"fmt"
 
-	helmv1 "github.com/k3s-io/helm-controller/pkg/apis/helm.cattle.io/v1"
 	"github.com/oneblock-ai/webhook/pkg/server/admission"
 	admissionregv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	mgmtv1 "github.com/llmos-ai/llmos-operator/pkg/apis/management.llmos.ai/v1"
 	"github.com/llmos-ai/llmos-operator/pkg/constant"
 	werror "github.com/llmos-ai/llmos-operator/pkg/webhook/error"
 )
@@ -23,18 +23,15 @@ func NewValidator() admission.Validator {
 }
 
 func (v *validator) Delete(_ *admission.Request, obj runtime.Object) error {
-	chart := obj.(*helmv1.HelmChart)
-	if isSystemChart(chart) {
-		return werror.MethodNotAllowed(fmt.Sprintf("Can't delete LLMOS system chart %s", chart.Name))
+	addon := obj.(*mgmtv1.ManagedAddon)
+	if isSystemAddon(addon) {
+		return werror.MethodNotAllowed(fmt.Sprintf("Can't delete system addon %s", addon.Name))
 	}
 	return nil
 }
 
-func isSystemChart(chart *helmv1.HelmChart) bool {
-	if chart.Name == constant.LLMOSCrdChartName || chart.Name == constant.LLMOSOperatorChartName {
-		return true
-	}
-	if chart.Labels != nil && chart.Labels[constant.SystemAddonLabel] == "true" {
+func isSystemAddon(addon *mgmtv1.ManagedAddon) bool {
+	if addon.Labels != nil && addon.Labels[constant.SystemAddonLabel] == "true" {
 		return true
 	}
 	return false
@@ -42,11 +39,11 @@ func isSystemChart(chart *helmv1.HelmChart) bool {
 
 func (v *validator) Resource() admission.Resource {
 	return admission.Resource{
-		Names:      []string{"helmcharts"},
+		Names:      []string{"managedaddons"},
 		Scope:      admissionregv1.NamespacedScope,
-		APIGroup:   helmv1.SchemeGroupVersion.Group,
-		APIVersion: helmv1.SchemeGroupVersion.Version,
-		ObjectType: &helmv1.HelmChart{},
+		APIGroup:   mgmtv1.SchemeGroupVersion.Group,
+		APIVersion: mgmtv1.SchemeGroupVersion.Version,
+		ObjectType: &mgmtv1.ManagedAddon{},
 		OperationTypes: []admissionregv1.OperationType{
 			admissionregv1.Delete,
 		},

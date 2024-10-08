@@ -24,6 +24,7 @@ const (
 	addonHelmChartOnDelete = "managedAddon.helmChartOnDelete"
 
 	defaultWaitTime = 5 * time.Second
+	strTrue         = "true"
 )
 
 type handler struct {
@@ -155,6 +156,8 @@ func (h *handler) enableAddonChart(addon *mgmtv1.ManagedAddon) (*mgmtv1.ManagedA
 
 func (h *handler) deployHelmChart(addon *mgmtv1.ManagedAddon) (*helmv1.HelmChart, error) {
 	logrus.Debugf("creating new helm chart %s for addon %s", getChartFullName(addon), addon.Name)
+	labels := addon.Labels
+	labels[constant.ManagedAddonLabel] = strTrue
 	return h.helmCharts.Create(&helmv1.HelmChart{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      addon.Name,
@@ -167,9 +170,7 @@ func (h *handler) deployHelmChart(addon *mgmtv1.ManagedAddon) (*helmv1.HelmChart
 					UID:        addon.UID,
 				},
 			},
-			Labels: map[string]string{
-				constant.ManagedAddonLabel: "true",
-			},
+			Labels: labels,
 		},
 		Spec: helmv1.HelmChartSpec{
 			TargetNamespace: addon.Namespace,
