@@ -27,6 +27,7 @@ import (
 
 type MlV1Interface interface {
 	RESTClient() rest.Interface
+	DatasetsGetter
 	ModelServicesGetter
 	NotebooksGetter
 }
@@ -34,6 +35,10 @@ type MlV1Interface interface {
 // MlV1Client is used to interact with features provided by the ml.llmos.ai group.
 type MlV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *MlV1Client) Datasets(namespace string) DatasetInterface {
+	return newDatasets(c, namespace)
 }
 
 func (c *MlV1Client) ModelServices(namespace string) ModelServiceInterface {

@@ -25,6 +25,23 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// DatasetList is a list of Dataset resources
+type DatasetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []Dataset `json:"items"`
+}
+
+func NewDataset(namespace, name string, obj Dataset) *Dataset {
+	obj.APIVersion, obj.Kind = SchemeGroupVersion.WithKind("Dataset").ToAPIVersionAndKind()
+	obj.Name = name
+	obj.Namespace = namespace
+	return &obj
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // ModelServiceList is a list of ModelService resources
 type ModelServiceList struct {
 	metav1.TypeMeta `json:",inline"`

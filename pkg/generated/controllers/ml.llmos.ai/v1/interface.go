@@ -30,6 +30,7 @@ func init() {
 }
 
 type Interface interface {
+	Dataset() DatasetController
 	ModelService() ModelServiceController
 	Notebook() NotebookController
 }
@@ -42,6 +43,10 @@ func New(controllerFactory controller.SharedControllerFactory) Interface {
 
 type version struct {
 	controllerFactory controller.SharedControllerFactory
+}
+
+func (v *version) Dataset() DatasetController {
+	return generic.NewController[*v1.Dataset, *v1.DatasetList](schema.GroupVersionKind{Group: "ml.llmos.ai", Version: "v1", Kind: "Dataset"}, "datasets", true, v.controllerFactory)
 }
 
 func (v *version) ModelService() ModelServiceController {

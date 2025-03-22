@@ -1,0 +1,182 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    {}
+  name: datasets.ml.llmos.ai
+spec:
+  group: ml.llmos.ai
+  names:
+    kind: Dataset
+    listKind: DatasetList
+    plural: datasets
+    singular: dataset
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.model
+      name: Model
+      type: string
+    - jsonPath: .status.readyReplicas
+      name: Ready
+      type: integer
+    - jsonPath: .status.state
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: Dataset represents the main structure of an LLM dataset.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              destinationUrl:
+                description: DestinationURL is the URL where the dataset is stored
+                  or hosted.
+                type: string
+              features:
+                description: |-
+                  Features describes the structure of the dataset (e.g., columns and their types),
+                  ensuring compatibility with various data formats. This is particularly useful for validating and processing LLM datasets,
+                  which often have structured data like instructions and outputs.
+                items:
+                  description: Feature represents a single feature (column) in the
+                    dataset.
+                  properties:
+                    name:
+                      description: Name is the name of the feature (column).
+                      type: string
+                    type:
+                      description: Type is the data type of the feature (e.g., "string",
+                        "int64", "float64", "array").
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+              fine_tuning_techniques:
+                description: FineTuningTechniques lists the supported fine-tuning
+                  techniques (e.g., "LoRA", "QLoRA", "GRPO").
+                items:
+                  type: string
+                type: array
+              format:
+                description: Format specifies the file format of the dataset (e.g.,
+                  "json", "jsonl", "csv", "parquet").
+                type: string
+              preprocessing:
+                description: Preprocessing is an optional configuration for data preprocessing.
+                properties:
+                  chunking_method:
+                    description: ChunkingMethod specifies the method for chunking
+                      data (e.g., "fixed_size", "by_sentence").
+                    type: string
+                  filtering_rules:
+                    description: FilteringRules is a list of rules for filtering data
+                      (e.g., ["remove_duplicates", "remove_empty"]).
+                    items:
+                      type: string
+                    type: array
+                  max_length:
+                    description: MaxLength is the maximum length for tokenization
+                      (e.g., 512).
+                    type: integer
+                  tokenizer_model:
+                    description: TokenizerModel specifies the tokenizer model used
+                      (e.g., "openapi/tiktoken", "bert-base-uncased").
+                    type: string
+                required:
+                - chunking_method
+                - filtering_rules
+                - max_length
+                - tokenizer_model
+                type: object
+              sourceUrl:
+                description: SourceURL is the URL where the dataset is sourced from.
+                type: string
+              tags:
+                description: Tags are keywords or labels associated with the dataset.
+                items:
+                  type: string
+                type: array
+            required:
+            - destinationUrl
+            - fine_tuning_techniques
+            - format
+            - sourceUrl
+            type: object
+          status:
+            properties:
+              conditions:
+                description: Conditions is a list of conditions associated with the
+                  dataset.
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      type: string
+                    message:
+                      description: Human-readable message indicating details about
+                        last transition
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of the condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              creator:
+                description: Creator is the name or identifier of the dataset creator.
+                type: string
+              state:
+                description: State is the current state of the dataset (e.g., "ready",
+                  "error").
+                type: string
+              version:
+                description: Version is the version number of the dataset to track
+                  updates.
+                type: string
+            required:
+            - conditions
+            - state
+            - version
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
