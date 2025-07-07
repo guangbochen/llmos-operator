@@ -151,8 +151,11 @@ func (h *handler) OnRemoveVersion(_ string, version *mlv1.LocalModelVersion) (*m
 
 	lm, err := h.LocalModelCache.Get(version.Namespace, version.Spec.LocalModel)
 	if err != nil {
-		return version, fmt.Errorf("failed to get local model %s/%s: %w", version.Namespace, version.Spec.LocalModel, err)
+		logrus.Debugf("failed to get local model %s/%s: %s", version.Namespace,
+			version.Spec.LocalModel, err.Error())
+		return nil, nil
 	}
+
 	// set default version to empty if the default version is deleted
 	// and the localmodel controller will set the latest version as default version
 	if lm.Spec.DefaultVersion == version.Name {
