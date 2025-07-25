@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""
-Pod Directory/File to Model Upload Script
+"""Pod Directory/File to Model Upload Script
 
 This script uploads files from a Pod directory or a single file to a specified model using presigned URLs.
-It supports recursive directory upload and single file upload with progress tracking and error handling.
+It supports recursive directory upload and single file upload with progress tracking and comprehensive error handling.
 
 Usage:
     # Upload directory
@@ -11,6 +10,19 @@ Usage:
     
     # Upload single file
     python upload_to_model.py --source-file /path/to/file.bin --namespace default --model-name my-model --bearer-token your-token
+    
+    # Upload with custom API server
+    python upload_to_model.py --source-dir /path/to/source --namespace default --model-name my-model --bearer-token your-token --api-server https://custom-api.example.com:8443
+    
+    # Upload with debug logging for troubleshooting
+    python upload_to_model.py --source-dir /path/to/source --namespace default --model-name my-model --bearer-token your-token --debug
+
+Debug Features:
+    - Detailed HTTP request/response logging
+    - File operation error details
+    - Network connection diagnostics
+    - Request timeout and retry information
+    - Full stack traces for unexpected errors
 
 Requirements:
     - requests
@@ -22,6 +34,7 @@ import sys
 import argparse
 import requests
 import json
+import logging
 from pathlib import Path
 from typing import List, Tuple, Optional
 from urllib.parse import urljoin
@@ -29,6 +42,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import threading
 import urllib3
+import traceback
 
 # Disable SSL warnings when skipping certificate verification
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -46,15 +60,31 @@ class ModelUploader:
     
     def __init__(self, namespace: str, model_name: str, 
                  timeout: int = 300, max_workers: int = 4, 
-                 bearer_token: str = None, skip_ssl_verify: bool = True):
-        self.api_server = 'https://llmos-operator.llmos-system.svc.cluster.local:8443'
+                 bearer_token: str = None, skip_ssl_verify: bool = True,
+                 debug: bool = False, api_server: str = None):
+        self.api_server = api_server or 'https://llmos-operator.llmos-system.svc.cluster.local:8443'
         self.namespace = namespace
         self.model_name = model_name
         self.timeout = timeout
         self.max_workers = max_workers
         self.bearer_token = bearer_token
         self.skip_ssl_verify = skip_ssl_verify
+        self.debug = debug
         self.session = requests.Session()
+        
+        # Configure logging
+        if debug:
+            logging.basicConfig(
+                level=logging.DEBUG,
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                handlers=[
+                    logging.StreamHandler(sys.stdout)
+                ]
+            )
+            self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.WARNING)
         
         # Set reasonable timeouts
         self.session.timeout = (10, timeout)
@@ -67,6 +97,16 @@ class ModelUploader:
             self.session.headers.update({
                 'Authorization': f'Bearer {bearer_token}'
             })
+            
+        if debug:
+            self.logger.debug(f"ModelUploader initialized:")
+            self.logger.debug(f"  API Server: {self.api_server}")
+            self.logger.debug(f"  Namespace: {self.namespace}")
+            self.logger.debug(f"  Model Name: {self.model_name}")
+            self.logger.debug(f"  Timeout: {self.timeout}s")
+            self.logger.debug(f"  Max Workers: {self.max_workers}")
+            self.logger.debug(f"  SSL Verify: {not self.skip_ssl_verify}")
+            self.logger.debug(f"  Bearer Token: {'***' if bearer_token else 'None'}")
         
     def _get_presigned_url(self, object_name: str, content_type: str = 'application/octet-stream', 
                           expiry_hours: int = 2) -> str:
@@ -80,17 +120,77 @@ class ModelUploader:
             "expiryHours": expiry_hours
         }
         
+        if self.debug:
+            self.logger.debug(f"Requesting presigned URL for object: {object_name}")
+            self.logger.debug(f"  Request URL: {url}")
+            self.logger.debug(f"  Request payload: {json.dumps(payload, indent=2)}")
+            self.logger.debug(f"  Content-Type: {content_type}")
+        
         try:
             response = self.session.post(url, json=payload, timeout=30)
+            
+            if self.debug:
+                self.logger.debug(f"Presigned URL response status: {response.status_code}")
+                self.logger.debug(f"Presigned URL response headers: {dict(response.headers)}")
+            
             response.raise_for_status()
             
             data = response.json()
+            
+            if self.debug:
+                # Log response but mask the actual presigned URL for security
+                safe_data = data.copy()
+                if 'presignedURL' in safe_data:
+                    safe_data['presignedURL'] = '***MASKED***'
+                self.logger.debug(f"Presigned URL response data: {json.dumps(safe_data, indent=2)}")
+            
             return data['presignedURL']
             
+        except requests.exceptions.Timeout as e:
+            error_msg = f"Timeout getting presigned URL for {object_name}: {e}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"Request timeout after 30 seconds")
+            raise Exception(error_msg) from e
+        except requests.exceptions.ConnectionError as e:
+            error_msg = f"Connection error getting presigned URL for {object_name}: {e}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"Failed to connect to API server: {self.api_server}")
+            raise Exception(error_msg) from e
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP error getting presigned URL for {object_name}: {e}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"HTTP Status Code: {response.status_code}")
+                try:
+                    error_response = response.json()
+                    self.logger.error(f"Error response: {json.dumps(error_response, indent=2)}")
+                except:
+                    self.logger.error(f"Error response text: {response.text}")
+            raise Exception(error_msg) from e
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to get presigned URL for {object_name}: {e}") from e
+            error_msg = f"Request error getting presigned URL for {object_name}: {e}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"Full traceback: {traceback.format_exc()}")
+            raise Exception(error_msg) from e
         except KeyError as e:
-            raise Exception(f"Invalid response format: missing {e}") from e
+            error_msg = f"Invalid response format for {object_name}: missing {e}"
+            if self.debug:
+                self.logger.error(error_msg)
+                try:
+                    self.logger.error(f"Full response data: {json.dumps(data, indent=2)}")
+                except:
+                    self.logger.error(f"Response data (raw): {data}")
+            raise Exception(error_msg) from e
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON response for {object_name}: {e}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"Response text: {response.text}")
+                self.logger.error(f"Response headers: {dict(response.headers)}")
+            raise Exception(error_msg) from e
     
     def _upload_file_with_presigned_url(self, file_path: str, presigned_url: str, show_progress: bool = False) -> bool:
         """Upload a single file using presigned URL.
@@ -103,6 +203,12 @@ class ModelUploader:
         try:
             file_size = Path(file_path).stat().st_size
             
+            if self.debug:
+                self.logger.debug(f"Starting upload for file: {file_path}")
+                self.logger.debug(f"  File size: {file_size:,} bytes")
+                self.logger.debug(f"  Show progress: {show_progress}")
+                self.logger.debug(f"  Upload timeout: {self.timeout}s")
+            
             with open(file_path, 'rb') as f:
                 # Detect content type based on file extension
                 content_type = self._get_content_type(file_path)
@@ -110,6 +216,10 @@ class ModelUploader:
                 headers = {
                     'Content-Type': content_type
                 }
+                
+                if self.debug:
+                    self.logger.debug(f"  Content-Type: {content_type}")
+                    self.logger.debug(f"  Upload headers: {headers}")
                 
                 # Create progress bar if requested and tqdm is available
                 if show_progress and tqdm and file_size > 0:
@@ -138,28 +248,110 @@ class ModelUploader:
                     wrapped_file = ProgressFileWrapper(f, progress_bar)
                     
                     try:
+                        if self.debug:
+                            self.logger.debug(f"  Starting PUT request with progress tracking...")
+                        
                         response = requests.put(
                             presigned_url, 
                             data=wrapped_file, 
                             headers=headers,
                             timeout=(10, self.timeout)
                         )
+                        
+                        if self.debug:
+                            self.logger.debug(f"  Upload response status: {response.status_code}")
+                            self.logger.debug(f"  Upload response headers: {dict(response.headers)}")
+                        
                         response.raise_for_status()
+                        
+                        if self.debug:
+                            self.logger.debug(f"  Upload successful for {file_path}")
+                        
                         return True
                     finally:
                         progress_bar.close()
                 else:
+                    if self.debug:
+                        self.logger.debug(f"  Starting PUT request without progress tracking...")
+                    
                     response = requests.put(
                         presigned_url, 
                         data=f, 
                         headers=headers,
                         timeout=(10, self.timeout)
                     )
+                    
+                    if self.debug:
+                        self.logger.debug(f"  Upload response status: {response.status_code}")
+                        self.logger.debug(f"  Upload response headers: {dict(response.headers)}")
+                    
                     response.raise_for_status()
+                    
+                    if self.debug:
+                        self.logger.debug(f"  Upload successful for {file_path}")
+                    
                     return True
                 
+        except FileNotFoundError as e:
+            error_msg = f"File not found: {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except PermissionError as e:
+            error_msg = f"Permission denied reading file: {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except requests.exceptions.Timeout as e:
+            error_msg = f"Upload timeout for {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Timeout after {self.timeout}s")
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except requests.exceptions.ConnectionError as e:
+            error_msg = f"Connection error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Failed to connect to storage endpoint")
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  HTTP Status Code: {response.status_code}")
+                self.logger.error(f"  Response headers: {dict(response.headers)}")
+                try:
+                    error_response = response.text
+                    self.logger.error(f"  Error response: {error_response}")
+                except:
+                    self.logger.error(f"  Could not read error response")
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg} (HTTP {response.status_code})")
+            return False
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Request error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Original error: {e}")
+                self.logger.error(f"  Full traceback: {traceback.format_exc()}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
         except Exception as e:
-            print(f"Error uploading {file_path}: {e}")
+            error_msg = f"Unexpected error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Error type: {type(e).__name__}")
+                self.logger.error(f"  Original error: {e}")
+                self.logger.error(f"  Full traceback: {traceback.format_exc()}")
+            print(f"Error uploading {file_path}: {error_msg}")
             return False
     
     def _upload_file_with_presigned_url_tracked(self, file_path: str, presigned_url: str, progress_bar) -> bool:
@@ -205,8 +397,66 @@ class ModelUploader:
                 response.raise_for_status()
                 return True
                 
+        except FileNotFoundError as e:
+            error_msg = f"File not found: {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except PermissionError as e:
+            error_msg = f"Permission denied reading file: {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except requests.exceptions.Timeout as e:
+            error_msg = f"Upload timeout for {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Timeout after {self.timeout}s")
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except requests.exceptions.ConnectionError as e:
+            error_msg = f"Connection error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Failed to connect to storage endpoint")
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  HTTP Status Code: {response.status_code}")
+                self.logger.error(f"  Response headers: {dict(response.headers)}")
+                try:
+                    error_response = response.text
+                    self.logger.error(f"  Error response: {error_response}")
+                except:
+                    self.logger.error(f"  Could not read error response")
+                self.logger.error(f"  Original error: {e}")
+            print(f"Error uploading {file_path}: {error_msg} (HTTP {response.status_code})")
+            return False
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Request error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Original error: {e}")
+                self.logger.error(f"  Full traceback: {traceback.format_exc()}")
+            print(f"Error uploading {file_path}: {error_msg}")
+            return False
         except Exception as e:
-            print(f"Error uploading {file_path}: {e}")
+            error_msg = f"Unexpected error uploading {file_path}"
+            if self.debug:
+                self.logger.error(error_msg)
+                self.logger.error(f"  Error type: {type(e).__name__}")
+                self.logger.error(f"  Original error: {e}")
+                self.logger.error(f"  Full traceback: {traceback.format_exc()}")
+            print(f"Error uploading {file_path}: {error_msg}")
             return False
     
     def _get_content_type(self, file_path: str) -> str:
@@ -376,6 +626,13 @@ class ModelUploader:
                     return success, relative_path, file_size
                     
                 except Exception as e:
+                    error_msg = f"Failed to upload {relative_path}: {e}"
+                    if self.debug:
+                        self.logger.error(f"Thread upload error for {relative_path}:")
+                        self.logger.error(f"  Error type: {type(e).__name__}")
+                        self.logger.error(f"  Error message: {e}")
+                        self.logger.error(f"  File size: {file_size:,} bytes")
+                        self.logger.error(f"  Full traceback: {traceback.format_exc()}")
                     file_progress.set_description(f"✗ {relative_path[:20]}.. - {str(e)[:10]}")
                     file_progress.close()
                     main_progress.update(1)
@@ -416,6 +673,13 @@ class ModelUploader:
                     return success, relative_path, file_size
                     
                 except Exception as e:
+                    error_msg = f"Failed to upload {relative_path}: {e}"
+                    if self.debug:
+                        self.logger.error(f"Upload error for {relative_path}:")
+                        self.logger.error(f"  Error type: {type(e).__name__}")
+                        self.logger.error(f"  Error message: {e}")
+                        self.logger.error(f"  File size: {file_size:,} bytes")
+                        self.logger.error(f"  Full traceback: {traceback.format_exc()}")
                     print(f"✗ {relative_path}: {e}")
                     return False, relative_path, file_size
             
@@ -463,6 +727,15 @@ Examples:
   
   # Upload with custom settings and SSL verification
   python upload_to_model.py --source-dir /data --namespace default --model-name training-data --bearer-token your-token --max-workers 8 --timeout 600 --verify-ssl
+  
+  # Upload with custom API server
+  python upload_to_model.py --source-dir /data --namespace default --model-name my-model --bearer-token your-token --api-server https://custom-api.example.com:8443
+  
+  # Upload with debug logging enabled
+  python upload_to_model.py --source-dir /data --namespace default --model-name my-model --bearer-token your-token --debug
+  
+  # Upload single file with debug logging
+  python upload_to_model.py --source-file /path/to/model.bin --namespace default --model-name my-model --bearer-token your-token --debug
         """
     )
     
@@ -501,6 +774,11 @@ Examples:
     )
     
     parser.add_argument(
+        '--api-server', 
+        help='API server URL (default: https://llmos-operator.llmos-system.svc.cluster.local:8443)'
+    )
+    
+    parser.add_argument(
         '--skip-ssl-verify', 
         action='store_true',
         default=True,
@@ -534,6 +812,12 @@ Examples:
         help='Show files that would be uploaded without actually uploading'
     )
     
+    parser.add_argument(
+        '--debug', 
+        action='store_true',
+        help='Enable debug logging for detailed error information'
+    )
+    
     args = parser.parse_args()
     
     # Validate arguments
@@ -547,7 +831,9 @@ Examples:
             timeout=args.timeout,
             max_workers=args.max_workers,
             bearer_token=args.bearer_token,
-            skip_ssl_verify=args.skip_ssl_verify
+            skip_ssl_verify=args.skip_ssl_verify,
+            debug=args.debug,
+            api_server=args.api_server
         )
         
         if args.dry_run:
@@ -601,7 +887,16 @@ Examples:
             print("✅ All files uploaded successfully!")
             sys.exit(0)
         else:
-            print(f"⚠️  {total - successful} files failed to upload")
+            failed_count = total - successful
+            print(f"⚠️  {failed_count} files failed to upload")
+            
+            # Print failed file names for single file uploads
+            if args.source_file and not success:
+                file_path = Path(args.source_file)
+                object_name = args.object_name or file_path.name
+                print(f"Failed uploads (1):")
+                print(f"  - {object_name}")
+            
             sys.exit(1)
             
     except KeyboardInterrupt:
